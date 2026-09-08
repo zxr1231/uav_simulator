@@ -3,6 +3,7 @@
   <arg name="verbose" value="false"/>
   <arg name="use_sim_time" value="true"/>
   <arg name="debug" value="false" />
+  <arg name="enable_keyboard_control" default="false" />
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/square/square_box.world" /> -->
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/square/square_static.world" /> -->
@@ -17,7 +18,7 @@
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan1/floorplan1_dynamic_16.world" /> -->
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan2/floorplan2_static.world" /> -->
-  <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan2/floorplan2_dynamic_5.world" /> -->
+  <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan2/floorplan2_dynamic_5.world" />
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan2/floorplan2_dynamic_12.world" /> -->
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan3/floorplan3_static.world" /> -->
@@ -28,7 +29,7 @@
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan4/floorplan4_static.world" /> -->
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/corridor/corridor_static.world" /> -->
-  <arg name="world_name" value="$(find uav_simulator)/worlds/corridor/corridor_dynamic_9.world" />
+  <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/corridor/corridor_dynamic_9.world" /> -->
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/tunnel/tunnel_basic_static.world" /> -->
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/tunnel/tunnel_c_shape_basic_static.world" /> -->
@@ -85,7 +86,7 @@
     <arg name="pose_topic" value="/CERLAB/quadcopter/pose" />
   </include>
 
-  <node name="keyboard_control" pkg="uav_simulator" type="keyboard_control" />
+  <node if="$(arg enable_keyboard_control)" name="keyboard_control" pkg="uav_simulator" type="keyboard_control" />
 
   <!-- <include file="$(find uav_simulator)/launch/rviz.launch"></include> -->
 
