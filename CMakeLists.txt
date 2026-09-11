@@ -179,13 +179,13 @@ add_executable(quadcopterTFBroadcaster src/quadcopterTFBroadcaster.cpp)
 set_target_properties(quadcopterPlugin
     PROPERTIES 
     LIBRARY_OUTPUT_DIRECTORY
-    ${PROJECT_SOURCE_DIR}/plugins
+    ${CATKIN_DEVEL_PREFIX}/lib
 )
 
 set_target_properties(obstaclePathPlugin
     PROPERTIES 
     LIBRARY_OUTPUT_DIRECTORY
-    ${PROJECT_SOURCE_DIR}/plugins
+    ${CATKIN_DEVEL_PREFIX}/lib
 )
 
 

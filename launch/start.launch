@@ -4,6 +4,8 @@
   <arg name="use_sim_time" value="true"/>
   <arg name="debug" value="false" />
   <arg name="enable_keyboard_control" default="false" />
+  <arg name="gui" default="true" />
+  <arg name="gazebo_seed" default="1" />
 
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/square/square_box.world" /> -->
   <!-- <arg name="world_name" value="$(find uav_simulator)/worlds/square/square_static.world" /> -->
@@ -66,6 +68,8 @@
         <arg name="verbose" value="$(arg verbose)"/>
         <arg name="use_sim_time" value="$(arg use_sim_time)"/>
         <arg name="debug" value="$(arg debug)" />
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="extra_gazebo_args" value="--seed $(arg gazebo_seed)" />
   </include>
 
 
