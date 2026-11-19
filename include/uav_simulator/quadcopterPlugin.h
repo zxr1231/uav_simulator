@@ -80,6 +80,10 @@ private:
   ros::Publisher pub_gt_pose_;   //for publishing ground truth pose
   ros::Publisher pub_gt_vec_;   //ground truth velocity in the body frame
   ros::Publisher pub_gt_acc_;   //ground truth acceleration in the body frame
+  void ReportNumericsFault(const std::string& detail);
+  ros::Publisher pub_numerics_fault_;
+  bool numerics_fault_reported_ = false;
+  ignition::math::Vector3d last_force_, last_torque_;
   ros::Publisher pub_gt_odom_; // publish odometry
 
 

@@ -2,6 +2,8 @@
 
 
 #include <cmath>
+#include <sstream>
+#include <std_msgs/String.h>
 #include <stdlib.h>
 #include <iostream>
 
@@ -233,6 +235,9 @@ void DroneSimpleController::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   }
       
 
+  pub_numerics_fault_ = node_handle_->advertise<std_msgs::String>(
+      "/CERLAB/quadcopter/numerics_fault", 1, true);
+
   LoadControllerSettings(_model, _sdf);
   
   Reset();
@@ -273,8 +278,31 @@ void DroneSimpleController::CmdCallback(const geometry_msgs::TwistStampedConstPt
   acc_control =  false;
 }
 
+void DroneSimpleController::ReportNumericsFault(const std::string& detail)
+{
+  if (numerics_fault_reported_) return;
+  numerics_fault_reported_ = true;
+  std::ostringstream message;
+  message << "gazebo_quadcopter: " << detail
+          << " cmd_stamp=" << cmd_acc.header.stamp
+          << " cmd_acc=(" << cmd_acc.acceleration_or_force.x << ' '
+          << cmd_acc.acceleration_or_force.y << ' ' << cmd_acc.acceleration_or_force.z << ')'
+          << " cmd_yaw=" << cmd_acc.yaw << " last_force=" << last_force_
+          << " last_torque=" << last_torque_;
+  std_msgs::String fault;
+  fault.data = message.str();
+  ROS_ERROR_STREAM(fault.data);
+  pub_numerics_fault_.publish(fault);
+}
+
 void DroneSimpleController::CmdAccCallback(const mavros_msgs::PositionTargetConstPtr& cmd_acc_msg)
 {
+  const auto& acceleration = cmd_acc_msg->acceleration_or_force;
+  if (!ignition::math::Vector3d(acceleration.x, acceleration.y, acceleration.z).IsFinite() ||
+      !std::isfinite(cmd_acc_msg->yaw)) {
+    ReportNumericsFault("received nonfinite acceleration or yaw command");
+    return;
+  }
   cmd_acc = *cmd_acc_msg;
   m_posCtrl = false;
   acc_control = true;
@@ -341,6 +369,10 @@ void DroneSimpleController::Update()
     common::Time sim_time = world->SimTime();
     double dt = (sim_time - last_time).Double();
     if (dt == 0.0) return;
+    if (!std::isfinite(dt) || dt < 0.0) {
+      ReportNumericsFault("invalid simulation time step");
+      return;
+    }
     
     UpdateState(dt);
     UpdateDynamics(dt);
@@ -406,6 +438,12 @@ void DroneSimpleController::UpdateDynamics(double dt){
     ignition::math::Vector3d body_angular_vel = pose.Rot().RotateVectorReverse(angular_velocity);
     ignition::math::Vector3d body_acc = pose.Rot().RotateVectorReverse(acceleration);
     
+    if (!pose.Pos().IsFinite() || !pose.Rot().IsFinite() ||
+        !body_vel.IsFinite() || !body_angular_vel.IsFinite() || !body_acc.IsFinite()) {
+      ReportNumericsFault("nonfinite world state before applying the current wrench");
+      return;
+    }
+
     //publish the velocity
     geometry_msgs::TwistStamped tw_stamped;
     geometry_msgs::Twist tw;
@@ -451,7 +489,13 @@ void DroneSimpleController::UpdateDynamics(double dt){
     // Get gravity
     ignition::math::Vector3d gravity_body = pose.Rot().RotateVector(world->Gravity());
     double gravity = gravity_body.Length();
-    double load_factor = gravity * gravity / world->Gravity().Dot(gravity_body);  // Get gravity
+    const double gravity_projection = world->Gravity().Dot(gravity_body);
+    if (!std::isfinite(gravity) || gravity <= EPS || !std::isfinite(gravity_projection) ||
+        std::abs(gravity_projection) <= EPS * gravity * gravity) {
+      ReportNumericsFault("invalid gravity projection for thrust calculation");
+      return;
+    }
+    double load_factor = gravity * gravity / gravity_projection;
   
     // Rotate vectors to coordinate frames relevant for control
     ignition::math::Quaterniond heading_quaternion(cos(euler.Z()/2),0,0,sin(euler.Z()/2));
@@ -577,8 +621,14 @@ void DroneSimpleController::UpdateDynamics(double dt){
       }
     }
 
+    if (!force.IsFinite() || !torque.IsFinite()) {
+      ReportNumericsFault("nonfinite force or torque before application");
+      return;
+    }
     if (max_force_ > 0.0 && force.Z() > max_force_) force.Z() = max_force_;
     if (force.Z() < 0.0) force.Z() = 0.0;
+    last_force_ = force;
+    last_torque_ = torque;
     // process robot state information
     if (navi_state == FLYING_MODEL) {
       link->AddRelativeForce(force);
